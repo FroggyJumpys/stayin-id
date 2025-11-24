@@ -15,7 +15,6 @@ export default function Hero() {
                     <p className="mb-5">
                         Pilihan terbaik untuk berlibur.
                     </p>
-                    <button className="btn btn-primary">Get Started</button>
                     </div>
                 </div>
             </div>

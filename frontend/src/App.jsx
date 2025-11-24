@@ -4,6 +4,8 @@ import {
   Route
 } from 'react-router-dom';
 import Home from './pages/Home';
+import Rooms from './pages/Rooms';
+import Service from './pages/Service';
 
 
 function App() {
@@ -11,6 +13,8 @@ function App() {
     <BrowserRouter>
     <Routes>
       <Route path='/' element={<Home />} />
+      <Route path='/rooms' element={<Rooms />}/>
+      <Route path='/service' element={<Service />}/>
     </Routes>
     </BrowserRouter>
   )

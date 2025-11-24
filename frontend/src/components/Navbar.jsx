@@ -1,9 +1,10 @@
+import { Link } from 'react-router-dom';
 import profileIcon from '../assets/profile-round-1342-svgrepo-com.svg';
 
 export default function Navbar() {
     return (
         <>
-            <div className="navbar bg-gray-200 shadow-sm">
+            <div className="navbar bg-base-100 shadow-sm">
                 <div className="navbar-start">
                     <div className="dropdown">
                         <div tabIndex={0} role="button" className="btn btn-ghost btn-circle">
@@ -11,10 +12,11 @@ export default function Navbar() {
                         </div>
                         <ul
                             tabIndex="-1"
-                            className="menu dropdown-content bg-base-100 rounded-box z-1 mt-3 w-60 p-5 shadow text-lg">
-                            <li className='text-base'><a>Homepage</a></li>
-                            <li className='text-base'><a>Portfolio</a></li>
-                            <li className='text-base'><a>About</a></li>
+                            className="menu dropdown-content bg-base-100 rounded-box gap-1 z-1 mt-3 w-60 p-5 shadow text-lg">
+                            <Link to='/' className='text-base'>HOME</Link>
+                            <Link to='/rooms' className='text-base'>KAMAR</Link>
+                            <Link to='/service' className='text-base'>SERVICE</Link>
+                            <Link to='/' className='text-base'>ABOUT</Link>
                         </ul>
                     </div>
                 </div>
