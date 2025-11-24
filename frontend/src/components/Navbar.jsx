@@ -22,13 +22,25 @@ export default function Navbar() {
                 </div>
                 <div className="navbar-center">
                     <button className="btn btn-ghost w-30 hover:bg-base-100 shadow-none border-none">
-                        <img src="/images/stayin-logo.png" alt="Logo stayin" className="w-40" />
+                        <Link to='/'>
+                            <img src="/images/stayin-logo.png" alt="Logo stayin" className="w-40" />
+                        </Link>
                     </button>
                 </div>
                 <div className="navbar-end">
-                    <button className="btn btn-ghost btn-circle hover:bg-base-100 shadow-none border-none">
-                        <img src={profileIcon} alt="Profil" />
-                    </button>
+                    <div className='dropdown dropdown-end'>
+                        <div tabIndex={0} role='button' className='btn btn-ghost btn-circle hover:bg-base-100 shadow-none border-none'>
+                            <img src={profileIcon} alt="Profil" />
+                        </div>
+                        <ul
+                            tabIndex="-1"
+                            className="menu dropdown-content bg-base-100 rounded-box gap-1 z-1 mt-3 w-60 p-5 shadow text-lg">
+                            <Link className='text-base'>Profile</Link>
+                            <Link className='text-base'>Dashboard</Link>
+                            {/* Nanti add fitur jika sudah login akan ganti jadi logout */}
+                            <Link to='/login' className='text-base'>Login</Link>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </>

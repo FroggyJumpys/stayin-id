@@ -2,17 +2,10 @@ import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
 import Footer from '../components/Footer';
 
-import gsap from 'gsap';
-import { useGSAP } from '@gsap/react';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import FadeIn from '../utils/animation/FadeIn';
-import FadeOut from '../utils/animation/FadeOut';
 import SlideRight from '../utils/animation/SlideRight';
+import { useGSAP } from '@gsap/react';
 import { Link } from 'react-router-dom';
-
-gsap.registerPlugin(useGSAP, ScrollTrigger);
-
-
 
 export default function Home() {
     useGSAP(() => {
