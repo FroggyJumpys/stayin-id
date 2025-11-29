@@ -8,6 +8,7 @@ import Rooms from './pages/Rooms';
 import Service from './pages/Service';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Admin from './pages/dashboard/Admin';
 
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
       <Route path='/service' element={<Service />}/>
       <Route path='/login' element={<Login />}/>
       <Route path='/register' element={<Register />}/>
+      <Route path='/admin' element={<Admin />} />
     </Routes>
     </BrowserRouter>
   )
