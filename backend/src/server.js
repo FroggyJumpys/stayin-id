@@ -7,6 +7,8 @@ import morgan from 'morgan';
 import cookieParser from 'cookie-parser'
 
 import userAPI from './router/users.js';
+import roomAPI from './router/rooms.js';
+import serviceAPI from './router/services.js';
 
 const app = express();
 
@@ -21,6 +23,8 @@ app.use(morgan('dev'));
 app.use(cookieParser());
 
 app.use('/api/users', userAPI);
+app.use('/api/rooms', roomAPI);
+app.use('/api/services', serviceAPI);
 
 app.get('/', (req, res) => {
     return res.json({ message: 'Server is up and running!' });
