@@ -1,9 +1,10 @@
 import { Router } from 'express';
-import { createPayment } from '../database/queries/payment.js';
+import { createPayment, getMidtransTransactionDetail, getPayment } from '../database/queries/payment.js';
 
 const router = Router();
 
-router.get('/', (req, res) => res.status(200).json({ message: 'Hello' }));
+router.get('/', getPayment);
+router.get('/midtrans/:orderId', getMidtransTransactionDetail)
 
 router.post('/create', createPayment);
 
