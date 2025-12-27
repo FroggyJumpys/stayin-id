@@ -1,7 +1,31 @@
 import { Link } from 'react-router-dom';
+import { Auth } from '../features/auth/helpers/Auth';
+import api from '../utils/api';
 import profileIcon from '../assets/profile-round-1342-svgrepo-com.svg';
 
 export default function Navbar() {
+    const { user, isLoading } = Auth();
+
+    const handleLogout = async () => {
+        try {
+            await api.post('/api/users/auth/logout', {});
+            // Refresh halaman untuk clear state SWR
+            window.location.href = '/';
+        } catch (error) {
+            console.error('Logout failed:', error);
+            // Tetap redirect meskipun error
+            window.location.href = '/';
+        }
+    };
+
+    // Dashboard route berdasarkan role
+    const getDashboardRoute = () => {
+        if (!user) return '/';
+        if (user.role === 'admin') return '/admin';
+        if (user.role === 'guest') return '/user';
+        return '/';
+    };
+
     return (
         <>
             <div className="navbar bg-base-100 shadow-sm">
@@ -35,10 +59,20 @@ export default function Navbar() {
                         <ul
                             tabIndex="-1"
                             className="menu dropdown-content bg-base-100 rounded-box gap-1 z-1 mt-3 w-60 p-5 shadow text-lg">
-                            <Link className='text-base'>Profile</Link>
-                            <Link className='text-base'>Dashboard</Link>
-                            {/* Nanti add fitur jika sudah login akan ganti jadi logout */}
-                            <Link to='/login' className='text-base'>Login</Link>
+                            {!isLoading && user ? (
+                                <>
+                                    <li className='text-base font-semibold px-4 py-2 text-primary'>
+                                        {user.full_name || user.email}
+                                    </li>
+                                    <Link to={getDashboardRoute()} className='text-base'>Dashboard</Link>
+                                    <button onClick={handleLogout} className='text-base text-left'>Logout</button>
+                                </>
+                            ) : (
+                                <>
+                                    <Link to='/login' className='text-base'>Login</Link>
+                                    <Link to='/register' className='text-base'>Register</Link>
+                                </>
+                            )}
                         </ul>
                     </div>
                 </div>

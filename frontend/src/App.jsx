@@ -3,12 +3,21 @@ import {
   Routes,
   Route
 } from 'react-router-dom';
-import Home from './pages/Home';
-import Rooms from './pages/Rooms';
-import Service from './pages/Service';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import Admin from './pages/dashboard/Admin';
+
+// Feature-based imports (menggunakan index untuk import yang lebih clean)
+import { Home } from './features/home';
+import { Rooms } from './features/rooms';
+import { Service } from './features/services';
+import { Login, Register, Protected } from './features/auth';
+import { 
+  Admin, 
+  User, 
+  AdminUser, 
+  AdminKamar, 
+  AdminService, 
+  AdminRating, 
+  UserSetting 
+} from './features/dashboard';
 
 
 function App() {
@@ -20,7 +29,41 @@ function App() {
       <Route path='/service' element={<Service />}/>
       <Route path='/login' element={<Login />}/>
       <Route path='/register' element={<Register />}/>
-      <Route path='/admin' element={<Admin />} />
+      <Route path='/admin' element={
+        <Protected requiredRole='admin'>
+          <Admin />
+        </Protected>
+        } />
+      <Route path='/admin/user' element={
+        <Protected requiredRole='admin'>
+          <AdminUser />
+        </Protected>
+        } />
+      <Route path='/admin/kamar' element={
+        <Protected requiredRole='admin'>
+          <AdminKamar />
+        </Protected>
+        } />
+      <Route path='/admin/service' element={
+        <Protected requiredRole='admin'>
+          <AdminService />
+        </Protected>
+        } />
+      <Route path='/admin/rating' element={
+        <Protected requiredRole='admin'>
+          <AdminRating />
+        </Protected>
+        } />
+      <Route path='/user' element={
+        <Protected requiredRole='guest'>
+          <User />
+        </Protected>
+        } />
+      <Route path='/user/setting' element={
+        <Protected requiredRole='guest'>
+          <UserSetting />
+        </Protected>
+        } />
     </Routes>
     </BrowserRouter>
   )
