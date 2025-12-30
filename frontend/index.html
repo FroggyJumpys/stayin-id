@@ -11,7 +11,35 @@
   </head>
   <body>
     <div id="root"></div>
-    <script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="%VITE_MT_CLIENT_KEY%"></script>
+    <script id="midtrans-snap-script" src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="%VITE_MT_CLIENT_KEY%"></script>
+    <script>
+      // Global callback helper (used by RoomBuyModel callbacks)
+      window.__STAYIN_ENV__ = {
+        API_URL: "%VITE_API_URL%"
+      };
+
+      window.__stayinMidtransCallback = async function(event, payload, meta) {
+        try {
+          var base = (window.__STAYIN_ENV__ && window.__STAYIN_ENV__.API_URL) ? String(window.__STAYIN_ENV__.API_URL) : "";
+          if (!base) {
+            console.warn("VITE_API_URL missing; cannot POST /api/payments/callback");
+            return;
+          }
+          base = base.replace(/\/+$/, "");
+
+          var resp = await fetch(base + "/api/payments/callback", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(Object.assign({ event: event, payload: payload }, meta || {}))
+          });
+          var text = await resp.text();
+          console.log("[payments/callback]", resp.status, text);
+          return text;
+        } catch (e) {
+          console.error("[payments/callback] failed:", e);
+        }
+      };
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
