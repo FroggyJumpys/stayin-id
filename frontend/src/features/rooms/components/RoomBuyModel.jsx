@@ -21,6 +21,7 @@
  */
 import { useState, useEffect, useRef } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../../../utils/api';
 import Loading from '../../../components/Loading.jsx'
 
@@ -43,8 +44,26 @@ const createPayment = async (data, url) => {
     };
 }
 
+const postSnapCallback = async (eventName, payload, payment) => {
+    try {
+        const fn = window?.__stayinMidtransCallback;
+        if (typeof fn === 'function') {
+            await fn(eventName, payload, { orderId: payment?.orderId });
+            return;
+        }
+        // Fallback (should not be needed if index.html is set)
+        const resp = await api.post(`${import.meta.env.VITE_API_URL}/api/payments/callback`, {
+            event: eventName,
+            payload,
+            orderId: payment?.orderId,
+        });
+        console.log('Callback response:', resp?.data);
+    } catch (err) {
+        console.error('Callback POST failed:', err?.response?.data || err);
+    }
+};
+
 export default function RoomBuyModel({ id }) {
-    // frontend akan memilih tipe kamar, lalu backend akan memberikan tipe kamar paling pertama yang availabel
     const { 
         register, 
         handleSubmit,
@@ -69,67 +88,72 @@ export default function RoomBuyModel({ id }) {
     const [paymentUrl, setPaymentUrl] = useState('');
     const [roomData, setRoomData] = useState();
     const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
 
-
+    // Pakai string, bukan array
     const selectedRoomType = useWatch({
         control,
-        name: ['room_type']
+        name: 'room_type'
     });
 
     useEffect(() => {
         const fetchUserData = async () => {
-            if (userId.current == null) {
+            try {
                 const res = await api.get(`${import.meta.env.VITE_API_URL}/api/users/auth/me`);
                 userId.current = res.data.id;
+
+                // Set form value DI SINI (bukan saat render)
+                setValue('user_id', res.data.id, { shouldValidate: true, shouldDirty: true });
+            } catch (err) {
+                console.error('Error fetching user data:', err?.response?.data || err);
             }
         };
+
         fetchUserData();
-    }, []);
+    }, [setValue]);
 
-    setValue('user_id', userId.current);
-
-    // mengambil data kamar pertama yang tersedia sesuai tipe pilihan
     useEffect(() => {
         const fetchRoomData = async () => {
-            if (selectedRoomType) {
-                setLoading(true);
-                try {
-                    // Ambil data relevan pertama yang tersedia dari API
-                    const res = await api.get(`${import.meta.env.VITE_API_URL}/api/rooms`);
-                    const data = res.data.filter(room => room.room_type === selectedRoomType[0] && room.status === 'tersedia');
-                    
-                    // Save data kedalam form
-                    setValue('capacity', data[0]?.capacity || 0);
-                    setValue('price', data[0]?.price || 0);
-                    setValue('room_number', data[0]?.room_number || '');
-                    
-                    // Simpan data kamar ke state
-                    setRoomData(data[0]);
-                } catch (error) {
-                    setRoomData(null);
-                    console.error('Error fetching room data:', error);
-                } finally {
-                    setLoading(false);
-                }
-            } else {
+            if (!selectedRoomType) {
                 setRoomData(null);
+                return;
+            }
+
+            setLoading(true);
+            try {
+                const res = await api.get(`${import.meta.env.VITE_API_URL}/api/rooms`);
+                const data = res.data.filter(
+                    (room) => room.room_type === selectedRoomType && room.status === 'tersedia'
+                );
+
+                setValue('capacity', data[0]?.capacity || 0);
+                setValue('price', data[0]?.price || 0);
+                setValue('room_number', data[0]?.room_number || '');
+                setRoomData(data[0] || null);
+            } catch (error) {
+                setRoomData(null);
+                console.error('Error fetching room data:', error?.response?.data || error);
+            } finally {
+                setLoading(false);
             }
         };
 
         fetchRoomData();
-    }, [selectedRoomType])
+    }, [selectedRoomType, setValue]);
 
     const onSubmit = async (data) => {
+        console.log('Submit payload:', data);
+
         try {
             setLoading(true);
-            
-            // Buat booking
+
             const bookData = {
                 user_id: data.user_id,
                 room_number: data.room_number,
                 check_in: data.check_in,
                 check_out: data.check_out
             };
+
             const booking = await createBooking(bookData, `${import.meta.env.VITE_API_URL}/api/bookings/create`);
 
             const paymentData = {
@@ -147,21 +171,43 @@ export default function RoomBuyModel({ id }) {
 
             const payment = await createPayment(paymentData, `${import.meta.env.VITE_API_URL}/api/payments/create`);
 
-            console.log(`Booking: ${booking.status}`);
-            console.log(`Payment: ${payment.status} - ${payment.token} - ${payment.url} - ${payment.orderId}`)
-            setPaymentUrl(payment.url);
+            console.log('Booking:', booking);
+            console.log('Payment:', payment);
+
+            document.getElementById(id).close();
+
+            if (payment?.token && window?.snap?.pay) {
+                window.snap.pay(payment.token, {
+                    onSuccess: (result) => {
+                        postSnapCallback('success', result, payment);
+                        navigate('/user');
+                    },
+                    onPending: (result) => {
+                        postSnapCallback('pending', result, payment);
+                    },
+                    onError: (result) => {
+                        postSnapCallback('error', result, payment);
+                    },
+                    onClose: () => {
+                        postSnapCallback('close', { message: 'User closed the popup.' });
+                    }
+                });
+            } else {
+                // Fallback: show redirect URL if snap is not loaded
+                setPaymentUrl(payment.url);
+            }
         } catch (error) {
-            setLoading(false)
-            console.log(error);
+            // Ini biar jelas errornya dari backend apa
+            console.error('Submit error:', error?.response?.status, error?.response?.data || error);
         } finally {
             setLoading(false);
         }
-    }
+    };
 
     return (
         <dialog id={id} className="modal">
-            {loading && <Loading />}
             <div className="modal-box w-11/12 max-w-5xl overflow-y-scroll md:overflow-y-hidden">
+                {loading && <Loading />}
                 <h3 className="font-bold text-lg">Pemesanan Kamar</h3>
                 <form onSubmit={handleSubmit(onSubmit)}>
                     <div className='flex flex-row my-4 gap-4'>
@@ -251,7 +297,9 @@ export default function RoomBuyModel({ id }) {
                     )}
 
                     {paymentUrl && (
-                        <p>{paymentUrl}</p>
+                        <p>
+                            <a className='link hover:text-base-300' href={paymentUrl}>Lanjut ke pembayaran.</a>
+                        </p>
                     )}
 
                     <div className="modal-action">
