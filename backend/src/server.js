@@ -12,6 +12,7 @@ import serviceAPI from './router/services.js';
 import reviewAPI from './router/reviews.js';
 import bookingAPI from './router/bookings.js';
 import paymentAPI from './router/payment.js';
+import orderAPI from './router/orders.js';
 
 const app = express();
 
@@ -35,7 +36,8 @@ app.use('/api/rooms', roomAPI);
 app.use('/api/services', serviceAPI);
 app.use('/api/reviews', reviewAPI);
 app.use('/api/bookings', bookingAPI);
-app.use('/api/payments', paymentAPI)
+app.use('/api/payments', paymentAPI);
+app.use('/api/orders', orderAPI);
 
 app.get('/', (req, res) => {
     return res.json({ message: 'Server is up and running!' });

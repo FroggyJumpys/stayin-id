@@ -8,6 +8,7 @@ import {
 import { Home } from './features/home';
 import { Rooms } from './features/rooms';
 import { Service } from './features/services';
+import { About } from './features/about';
 import { Login, Register, Protected } from './features/auth';
 import { 
   Admin, 
@@ -16,8 +17,15 @@ import {
   AdminKamar, 
   AdminService, 
   AdminRating, 
-  UserSetting 
+  UserSetting,
+  UserBookings,
+  UserOrders,
+  UserRatings,
+  Staff,
+  StaffBookings,
+  StaffOrders
 } from './features/dashboard';
+import NotFound from './features/NotFound';
 
 
 function App() {
@@ -25,6 +33,7 @@ function App() {
     <BrowserRouter>
     <Routes>
       <Route path='/' element={<Home />} />
+      <Route path='/about' element={<About />} />
       <Route path='/rooms' element={<Rooms />}/>
       <Route path='/service' element={<Service />}/>
       <Route path='/login' element={<Login />}/>
@@ -64,6 +73,37 @@ function App() {
           <UserSetting />
         </Protected>
         } />
+      <Route path='/user/bookings' element={
+        <Protected requiredRole='guest'>
+          <UserBookings />
+        </Protected>
+        } />
+      <Route path='/user/orders' element={
+        <Protected requiredRole='guest'>
+          <UserOrders />
+        </Protected>
+        } />
+      <Route path='/user/ratings' element={
+        <Protected requiredRole='guest'>
+          <UserRatings />
+        </Protected>
+        } />
+      <Route path='/staff' element={
+        <Protected requiredRole='staff'>
+          <Staff />
+        </Protected>
+        } />
+      <Route path='/staff/bookings' element={
+        <Protected requiredRole='staff'>
+          <StaffBookings />
+        </Protected>
+        } />
+      <Route path='/staff/orders' element={
+        <Protected requiredRole='staff'>
+          <StaffOrders />
+        </Protected>
+        } />
+      <Route path='*' element={<NotFound />} />
     </Routes>
     </BrowserRouter>
   )
