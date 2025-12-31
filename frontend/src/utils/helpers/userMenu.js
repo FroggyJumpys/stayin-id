@@ -10,9 +10,9 @@ import exitIcon from '../../assets/leave.svg';
 export function buildUserMenu(navigate) {
     return [
         { title: 'Home', icon: homeIcon, onClick: () => navigate('/user') },
-        { title: 'Booking', icon: kamarIcon, onClick: () => navigate('') },
-        { title: 'Services', icon: serviceIcon, onClick: () => navigate('') },
-        { title: 'Rating', icon: starIcon, onClick: () => navigate('') },
+        { title: 'Booking', icon: kamarIcon, onClick: () => navigate('/user/bookings') },
+        { title: 'Services', icon: serviceIcon, onClick: () => navigate('/user/orders') },
+        { title: 'Rating', icon: starIcon, onClick: () => navigate('/user/ratings') },
         { title: 'Setting', icon: settingIcon, onClick: () => navigate('/user/setting') },
         { title: 'Exit', icon: exitIcon, onClick: () => navigate('/') }
     ];

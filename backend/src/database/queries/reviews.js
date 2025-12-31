@@ -148,4 +148,36 @@ const deleteReview = async (req, res) => {
     }
 };
 
-export { getReview, getRecentReview, createReview, updateReview, deleteReview };
+/**
+ * Mengambil N review terbaru untuk ditampilkan di homepage
+ * - Default limit 5 review
+ * - Diurutkan berdasarkan created_at DESC
+ * - Include full_name untuk ditampilkan
+ * @param {Express.Request} req Express request (query: limit opsional)
+ * @param {Express.Response} res Express response
+ * @returns {Promise<void>} JSON daftar review terbaru
+ */
+const getLatestReviews = async (req, res) => {
+    const limit = parseInt(req.query.limit) || 5;
+
+    try {
+        const data = await pool.query(`
+            SELECT r.id, r.user_id, r.rating, r.comment, r.created_at,
+                   u.full_name
+            FROM reviews r
+            LEFT JOIN users u ON r.user_id = u.id
+            ORDER BY r.created_at DESC
+            LIMIT $1
+        `, [limit]);
+
+        return res.status(200).json({
+            message: `Berhasil mengambil ${data.rowCount} review terbaru.`,
+            data: data.rows
+        });
+    } catch (error) {
+        console.error('Error fetching latest reviews:', error);
+        return res.status(500).json({ message: 'Kesalahan server internal.', err: error });
+    }
+};
+
+export { getReview, getRecentReview, getLatestReviews, createReview, updateReview, deleteReview };

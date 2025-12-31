@@ -70,7 +70,7 @@ const getUserBookings = async (req, res) => {
         // Ambil semua booking user dengan JOIN room untuk detail kamar
         const data = await pool.query(
             `SELECT b.*, 
-            r.room_number, r.room_type, r.price, r.image_url 
+            r.room_number, r.room_type, r.price
             FROM bookings b
             JOIN rooms r ON b.room_id = r.id
             WHERE b.user_id = $1
@@ -268,6 +268,52 @@ const deleteBooking = async (req, res) => {
     }
 };
 
+/**
+ * Update status booking (untuk staff)
+ * - Validasi keberadaan booking
+ * - Status: pending, dikonfirmasi, selesai, dibatalkan
+ * 
+ * @param {Express.Request} req - Object request dengan body: { id, status }
+ * @param {Express.Response} res - Object response dari Express
+ * @returns {Promise<void>} JSON berisi booking yang sudah diupdate
+ */
+const updateBookingStatus = async (req, res) => {
+    const { id, status } = req.body;
+
+    // Validasi input
+    if (!id || !status) {
+        return res.status(400).json({ message: 'ID dan status booking wajib diisi.' });
+    }
+
+    // Validasi status yang valid
+    const validStatuses = ['pending', 'dikonfirmasi', 'selesai', 'dibatalkan'];
+    if (!validStatuses.includes(status)) {
+        return res.status(400).json({ message: `Status tidak valid. Gunakan: ${validStatuses.join(', ')}` });
+    }
+
+    try {
+        // Cek apakah booking ada
+        const isExist = await pool.query('SELECT * FROM bookings WHERE id = $1', [id]);
+        if (isExist.rowCount <= 0) {
+            return res.status(404).json({ message: `Booking dengan id ${id} tidak ditemukan.` });
+        }
+
+        // Update status booking
+        const updated = await pool.query(
+            'UPDATE bookings SET status = $1 WHERE id = $2 RETURNING *',
+            [status, id]
+        );
+
+        return res.status(200).json({
+            message: `Status booking ${id} berhasil diubah menjadi ${status}.`,
+            data: updated.rows[0]
+        });
+    } catch (error) {
+        console.error('Error updating booking status:', error);
+        return res.status(500).json({ message: 'Kesalahan server internal.' });
+    }
+};
+
 // ====================================
 // EXPORTS
 // ====================================
@@ -277,5 +323,6 @@ export {
     getUserBookings,
     createBooking,
     updateBooking,
+    updateBookingStatus,
     deleteBooking
 };

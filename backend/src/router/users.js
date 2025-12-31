@@ -5,6 +5,7 @@ import {
     getGrowth,
     getUsers,
     getRecentUser,
+    getUserData,
     loginUser,
     logoutUser,
     updateUser,
@@ -18,6 +19,7 @@ const router = Router();
 router.get('/', getUsers);
 router.get('/:email', getUsers);
 router.get('/data/recent', getRecentUser);
+router.get('/data/:user_id', authorize(), getUserData); // Data lengkap user + statistik
 router.get('/admin/growth', authorize(), getGrowth);
 router.get('/auth/me', authorize(), (req, res) => {
     return res.json(req.user);

@@ -47,6 +47,96 @@ const getRecentUser = async (req, res) => {
     };
 };
 
+/**
+ * Mengambil data lengkap user beserta statistik
+ * - Data user dasar (tanpa password)
+ * - Total bookings dan total payments (hanya yang dikonfirmasi)
+ * - Total service orders dan total amount (hanya yang selesai)
+ * - Semua reviews user
+ * 
+ * @param {Express.Request} req - Object request dengan params: user_id
+ * @param {Express.Response} res - Object response dari Express
+ * @returns {Promise<void>} JSON berisi data lengkap user dan statistik
+ */
+const getUserData = async (req, res) => {
+    const userId = req.params.user_id;
+
+    // Validasi: pastikan user_id tersedia
+    if (!userId) {
+        return res.status(400).json({ message: 'User ID tidak boleh kosong.' });
+    }
+
+    try {
+        // Query 1: Data user dasar (tanpa password_hash)
+        const userQuery = await pool.query(
+            'SELECT id, full_name, email, phone, role, created_at, updated_at FROM users WHERE id = $1',
+            [userId]
+        );
+
+        if (userQuery.rowCount <= 0) {
+            return res.status(404).json({ message: 'User tidak ditemukan.' });
+        }
+
+        // Query 2: Summary bookings & payments (hanya status 'dikonfirmasi' atau 'selesai')
+        const paymentSummary = await pool.query(`
+            SELECT 
+                COUNT(DISTINCT b.id) AS total_bookings,
+                COALESCE(SUM(p.amount), 0) AS total_payment
+            FROM bookings b
+            LEFT JOIN payments p ON p.booking_id = b.id
+            WHERE b.user_id = $1
+            AND b.status IN ('dikonfirmasi')
+        `, [userId]);
+
+        // Query 3: Summary service orders (hanya status 'dikonfirmasi')
+        const orderSummary = await pool.query(`
+            SELECT 
+                COUNT(so.id) AS total_orders,
+                COALESCE(SUM(so.total_amount), 0) AS total_order_amount
+            FROM service_orders so
+            INNER JOIN bookings b ON so.booking_id = b.id
+            WHERE b.user_id = $1
+            AND so.status = 'dikonfirmasi'
+        `, [userId]);
+
+        // Query 4: Semua reviews user
+        const reviewsQuery = await pool.query(`
+            SELECT 
+                r.id,
+                r.rating,
+                r.comment,
+                r.created_at,
+                r.updated_at
+            FROM reviews r
+            WHERE r.user_id = $1
+            ORDER BY r.created_at DESC
+        `, [userId]);
+
+        // Hitung rata-rata rating
+        const avgRating = reviewsQuery.rows.length > 0
+            ? (reviewsQuery.rows.reduce((sum, r) => sum + r.rating, 0) / reviewsQuery.rows.length).toFixed(2)
+            : 0;
+
+        // Response dengan struktur yang rapi
+        return res.status(200).json({
+            user: userQuery.rows[0],
+            summary: {
+                total_bookings: parseInt(paymentSummary.rows[0].total_bookings) || 0,
+                total_payment: parseInt(paymentSummary.rows[0].total_payment) || 0,
+                total_orders: parseInt(orderSummary.rows[0].total_orders) || 0,
+                total_order_amount: parseInt(orderSummary.rows[0].total_order_amount) || 0,
+                total_reviews: reviewsQuery.rows.length,
+                avg_rating: parseFloat(avgRating)
+            },
+            reviews: reviewsQuery.rows
+        });
+
+    } catch (error) {
+        console.error('Error fetching user data:', error);
+        return res.status(500).json({ message: 'Kesalahan server internal.', err: error });
+    }
+}
+
 const getGrowth = async (req, res) => {
     try {
         const query = `
@@ -334,6 +424,7 @@ const logoutUser = async (req, res) => {
 export {
     getUsers,
     getRecentUser,
+    getUserData,
     getGrowth,
     createUser,
     updateUser,

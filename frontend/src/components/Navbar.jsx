@@ -22,6 +22,7 @@ export default function Navbar() {
     const getDashboardRoute = () => {
         if (!user) return '/';
         if (user.role === 'admin') return '/admin';
+        if (user.role === 'staff') return '/staff';
         if (user.role === 'guest') return '/user';
         return '/';
     };
@@ -40,7 +41,7 @@ export default function Navbar() {
                             <Link to='/' className='text-base'>HOME</Link>
                             <Link to='/rooms' className='text-base'>KAMAR</Link>
                             <Link to='/service' className='text-base'>SERVICE</Link>
-                            <Link to='/' className='text-base'>ABOUT</Link>
+                            <Link to='/about' className='text-base'>ABOUT</Link>
                         </ul>
                     </div>
                 </div>

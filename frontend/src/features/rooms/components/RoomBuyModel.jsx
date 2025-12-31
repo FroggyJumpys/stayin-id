@@ -88,6 +88,8 @@ export default function RoomBuyModel({ id }) {
     const [paymentUrl, setPaymentUrl] = useState('');
     const [roomData, setRoomData] = useState();
     const [loading, setLoading] = useState(false);
+    const [totalNights, setTotalNights] = useState(0);
+    const [totalAmount, setTotalAmount] = useState(0);
     const navigate = useNavigate();
 
     // Pakai string, bukan array
@@ -95,6 +97,33 @@ export default function RoomBuyModel({ id }) {
         control,
         name: 'room_type'
     });
+
+    // Watch check_in dan check_out untuk kalkulasi jumlah malam
+    const checkInDate = useWatch({ control, name: 'check_in' });
+    const checkOutDate = useWatch({ control, name: 'check_out' });
+
+    // Hitung jumlah malam dan total harga saat tanggal berubah
+    useEffect(() => {
+        if (checkInDate && checkOutDate && roomData?.price) {
+            const checkIn = new Date(checkInDate);
+            const checkOut = new Date(checkOutDate);
+            
+            // Hitung selisih dalam milidetik lalu konversi ke hari
+            const diffTime = checkOut.getTime() - checkIn.getTime();
+            const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (nights > 0) {
+                setTotalNights(nights);
+                setTotalAmount(roomData.price * nights);
+            } else {
+                setTotalNights(0);
+                setTotalAmount(0);
+            }
+        } else {
+            setTotalNights(0);
+            setTotalAmount(0);
+        }
+    }, [checkInDate, checkOutDate, roomData?.price]);
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -144,6 +173,12 @@ export default function RoomBuyModel({ id }) {
     const onSubmit = async (data) => {
         console.log('Submit payload:', data);
 
+        // Validasi: pastikan jumlah malam valid
+        if (totalNights <= 0) {
+            alert('Tanggal check-out harus setelah tanggal check-in.');
+            return;
+        }
+
         try {
             setLoading(true);
 
@@ -163,10 +198,11 @@ export default function RoomBuyModel({ id }) {
                 phone: data.phone,
                 room_type: data.room_type,
                 room_number: data.room_number,
-                product_name: `Kamar ${data.room_type} - ${data.room_number}`,
+                product_name: `Kamar ${data.room_type} - ${data.room_number} (${totalNights} malam)`,
                 capacity: data.capacity,
                 price: data.price,
-                quantity: 1
+                quantity: totalNights,  // Jumlah malam sebagai quantity
+                total_amount: totalAmount  // Total harga yang sudah dihitung
             };
 
             const payment = await createPayment(paymentData, `${import.meta.env.VITE_API_URL}/api/payments/create`);
@@ -206,7 +242,7 @@ export default function RoomBuyModel({ id }) {
 
     return (
         <dialog id={id} className="modal">
-            <div className="modal-box w-11/12 max-w-5xl overflow-y-scroll md:overflow-y-hidden">
+            <div className="modal-box w-11/12 max-w-5xl overflow-y-scroll">
                 {loading && <Loading />}
                 <h3 className="font-bold text-lg">Pemesanan Kamar</h3>
                 <form onSubmit={handleSubmit(onSubmit)}>
@@ -292,6 +328,26 @@ export default function RoomBuyModel({ id }) {
                                     <span className="label-text">Harga Per Malam</span>
                                 </label>
                                 <input type="text" placeholder={Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(roomData.price)} className='input input-ghost rounded-none' disabled/>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Tampilkan perhitungan total harga */}
+                    {totalNights > 0 && roomData && (
+                        <div className='bg-base-200 p-4 rounded-lg my-4'>
+                            <h4 className='font-semibold text-lg mb-2'>Rincian Harga</h4>
+                            <div className='flex justify-between'>
+                                <span>Harga per malam</span>
+                                <span>{Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(roomData.price)}</span>
+                            </div>
+                            <div className='flex justify-between'>
+                                <span>Jumlah malam</span>
+                                <span>{totalNights} malam</span>
+                            </div>
+                            <div className='divider my-1'></div>
+                            <div className='flex justify-between font-bold text-lg'>
+                                <span>Total</span>
+                                <span className='text-primary'>{Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalAmount)}</span>
                             </div>
                         </div>
                     )}
