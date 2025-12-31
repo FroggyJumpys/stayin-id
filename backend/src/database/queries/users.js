@@ -32,10 +32,141 @@ const getUsers = async (req, res) => {
         const data = await pool.query('SELECT * FROM users');
         return res.json(data.rows);
     } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Kesalahan server internal.' });
+        return res.status(500).json({ message: 'Kesalahan server internal.', err: error });
     }
 };
+
+const getRecentUser = async (req, res) => {
+    try {
+        const data = await pool.query('SELECT * FROM users ORDER BY created_at DESC');
+        return res.status(200).json({
+            data: data.rows[0]
+        });
+    } catch (error) {
+        return res.status(500).json({ message: 'Kesalahan server internal.', err: error });
+    };
+};
+
+/**
+ * Mengambil data lengkap user beserta statistik
+ * - Data user dasar (tanpa password)
+ * - Total bookings dan total payments (hanya yang dikonfirmasi)
+ * - Total service orders dan total amount (hanya yang selesai)
+ * - Semua reviews user
+ * 
+ * @param {Express.Request} req - Object request dengan params: user_id
+ * @param {Express.Response} res - Object response dari Express
+ * @returns {Promise<void>} JSON berisi data lengkap user dan statistik
+ */
+const getUserData = async (req, res) => {
+    const userId = req.params.user_id;
+
+    // Validasi: pastikan user_id tersedia
+    if (!userId) {
+        return res.status(400).json({ message: 'User ID tidak boleh kosong.' });
+    }
+
+    try {
+        // Query 1: Data user dasar (tanpa password_hash)
+        const userQuery = await pool.query(
+            'SELECT id, full_name, email, phone, role, created_at, updated_at FROM users WHERE id = $1',
+            [userId]
+        );
+
+        if (userQuery.rowCount <= 0) {
+            return res.status(404).json({ message: 'User tidak ditemukan.' });
+        }
+
+        // Query 2: Summary bookings & payments (hanya status 'dikonfirmasi' atau 'selesai')
+        const paymentSummary = await pool.query(`
+            SELECT 
+                COUNT(DISTINCT b.id) AS total_bookings,
+                COALESCE(SUM(p.amount), 0) AS total_payment
+            FROM bookings b
+            LEFT JOIN payments p ON p.booking_id = b.id
+            WHERE b.user_id = $1
+            AND b.status IN ('dikonfirmasi')
+        `, [userId]);
+
+        // Query 3: Summary service orders (hanya status 'dikonfirmasi')
+        const orderSummary = await pool.query(`
+            SELECT 
+                COUNT(so.id) AS total_orders,
+                COALESCE(SUM(so.total_amount), 0) AS total_order_amount
+            FROM service_orders so
+            INNER JOIN bookings b ON so.booking_id = b.id
+            WHERE b.user_id = $1
+            AND so.status = 'dikonfirmasi'
+        `, [userId]);
+
+        // Query 4: Semua reviews user
+        const reviewsQuery = await pool.query(`
+            SELECT 
+                r.id,
+                r.rating,
+                r.comment,
+                r.created_at,
+                r.updated_at
+            FROM reviews r
+            WHERE r.user_id = $1
+            ORDER BY r.created_at DESC
+        `, [userId]);
+
+        // Hitung rata-rata rating
+        const avgRating = reviewsQuery.rows.length > 0
+            ? (reviewsQuery.rows.reduce((sum, r) => sum + r.rating, 0) / reviewsQuery.rows.length).toFixed(2)
+            : 0;
+
+        // Response dengan struktur yang rapi
+        return res.status(200).json({
+            user: userQuery.rows[0],
+            summary: {
+                total_bookings: parseInt(paymentSummary.rows[0].total_bookings) || 0,
+                total_payment: parseInt(paymentSummary.rows[0].total_payment) || 0,
+                total_orders: parseInt(orderSummary.rows[0].total_orders) || 0,
+                total_order_amount: parseInt(orderSummary.rows[0].total_order_amount) || 0,
+                total_reviews: reviewsQuery.rows.length,
+                avg_rating: parseFloat(avgRating)
+            },
+            reviews: reviewsQuery.rows
+        });
+
+    } catch (error) {
+        console.error('Error fetching user data:', error);
+        return res.status(500).json({ message: 'Kesalahan server internal.', err: error });
+    }
+}
+
+const getGrowth = async (req, res) => {
+    try {
+        const query = `
+            WITH this_month AS (
+                SELECT COUNT(*) AS total 
+                FROM users
+                WHERE EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+                AND EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM CURRENT_DATE)
+            ),
+            last_month AS (
+                SELECT COUNT(*) AS total 
+                FROM users
+                WHERE EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE - INTERVAL '1 month')
+                AND EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM CURRENT_DATE - INTERVAL '1 month')
+            )
+            SELECT 
+                this_month.total AS total_this_month,
+                last_month.total AS total_last_month,
+                ROUND(
+                (this_month.total - last_month.total)::decimal / NULLIF(last_month.total,0) * 100, 
+                2
+                ) AS growth_percentage
+            FROM this_month, last_month;
+        `;
+        const result = await pool.query(query);
+        res.status(200).json(result.rows[0]);
+    } catch (error) {
+
+    }
+}
 
 /**
  * Membuat user baru di database
@@ -87,8 +218,7 @@ const createUser = async (req, res) => {
     } catch (error) {
         // Rollback jika terjadi error
         await pool.query('ROLLBACK');
-        console.error(error);
-        return res.status(500).json({ message: 'Kesalahan server internal.' });
+        return res.status(500).json({ message: 'Kesalahan server internal.', err: error });
     }
 }
 
@@ -104,7 +234,7 @@ const createUser = async (req, res) => {
  * @returns {Promise<void>} JSON berisi status dan data user yang sudah diupdate
  */
 const updateUser = async (req, res) => {
-    const { target_email, full_name, email, password, phone } = req.body;
+    const { target_email, full_name, email, password, phone, role } = req.body;
 
     // Validasi: pastikan semua field terisi
     if (!target_email || !email || !full_name || !password || !phone)
@@ -126,8 +256,8 @@ const updateUser = async (req, res) => {
 
         // Update semua field user
         const data = await pool.query(
-            'UPDATE users SET full_name = $1, email = $2, password_hash = $3, phone = $4, updated_at = $5 WHERE email = $6 RETURNING *',
-            [full_name, email, hashPassword, phone, updatedAt, target_email]
+            'UPDATE users SET full_name = $1, email = $2, password_hash = $3, phone = $4, updated_at = $5, role = $6 WHERE email = $7 RETURNING *',
+            [full_name, email, hashPassword, phone, updatedAt, role, target_email]
         );
 
         await pool.query('COMMIT');
@@ -138,10 +268,46 @@ const updateUser = async (req, res) => {
         });
     } catch (error) {
         await pool.query('ROLLBACK');
-        console.error(error);
-        return res.status(500).json({ message: 'Kesalahan server internal.' });
-    }
+        return res.status(500).json({ message: 'Kesalahan server internal.', err: error });
+    };
 };
+
+const changePassword = async (req, res) => {
+    const { email, old_password, new_password } = req.body;
+
+    if (!email || !old_password || !new_password)
+        return res.status(400).json({ message: 'Field data kosong.' });
+
+    try {
+        await pool.query('BEGIN');
+
+        const users = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+        if (users.rowCount <= 0) {
+            await pool.query('ROLLBACK');
+            return res.status(404).json({ message: `Pengguna dengan email ${email} tidak ada.` });
+        };
+
+        const updatedAt = new Date();
+        const checkPass = await bcrypt.compare(old_password, users.rows[0].password_hash);
+        if (!checkPass) {
+            await pool.query('ROLLBACK');
+            return res.status(403).json({ message: 'Password salah.' });
+        };
+
+        const hashNewPass = await bcrypt.hash(new_password, 10);
+        await pool.query(
+            'UPDATE users SET password_hash = $1, updated_at = $2 WHERE email = $3',
+            [hashNewPass, updatedAt, email]
+        );
+        await pool.query('COMMIT');
+
+        return res.status(200).json({ message: `${email} password telah diperbarui.` });
+    } catch (error) {
+        await pool.query('ROLLBACK');
+        return res.status(500).json({ message: 'Kesalahan server internal.', err: error });
+    }
+
+}
 
 /**
  * Menghapus user dari database berdasarkan email
@@ -153,10 +319,13 @@ const updateUser = async (req, res) => {
  * @returns {Promise<void>} JSON berisi status penghapusan
  */
 const deleteUser = async (req, res) => {
-    const email = req.body.email;
+    const { email } = req.body;
 
     // Validasi: pastikan email tersedia
-    if (!email) return res.status(400).json({ message: 'Field data kosong.' });
+    if (!email) {
+        console.error('Delete user error: email is missing from request body');
+        return res.status(400).json({ message: 'Email tidak boleh kosong.' });
+    }
 
     try {
         await pool.query('BEGIN');
@@ -165,7 +334,7 @@ const deleteUser = async (req, res) => {
         const isExist = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
         if (isExist.rowCount <= 0) {
             await pool.query('ROLLBACK');
-            return res.status(404).json({ message: 'Pengguna tidak ada.' });
+            return res.status(404).json({ message: `Pengguna dengan email ${email} tidak ditemukan.` });
         }
 
         // Hapus user dari database
@@ -173,11 +342,11 @@ const deleteUser = async (req, res) => {
 
         await pool.query('COMMIT');
 
-        res.status(200).json({ message: `Pengguna dengan email ${email} telah dihapus.` });
+        return res.status(200).json({ message: `Pengguna dengan email ${email} telah dihapus.` });
     } catch (error) {
         await pool.query('ROLLBACK');
-        console.error(error);
-        return res.status(500).json({ message: 'Kesalahan server internal.' });
+        console.error('Delete user error:', error);
+        return res.status(500).json({ message: 'Kesalahan server internal.', error: error.message });
     }
 }
 
@@ -229,8 +398,7 @@ const loginUser = async (req, res) => {
 
         return res.status(200).json({ message: 'Login berhasil.' });
     } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Kesalahan server internal.' });
+        return res.status(500).json({ message: 'Kesalahan server internal.', err: error });
     }
 };
 
@@ -249,14 +417,18 @@ const logoutUser = async (req, res) => {
         res.clearCookie('token');
         return res.status(200).json({ message: 'Logout berhasil.' });
     } catch (error) {
-        return res.status(500).json({ message: 'Kesalahan server internal.' }); // Fixed typo: stauts -> status
+        return res.status(500).json({ message: 'Kesalahan server internal.', err: error });
     }
 }
 
 export {
     getUsers,
+    getRecentUser,
+    getUserData,
+    getGrowth,
     createUser,
     updateUser,
+    changePassword,
     deleteUser,
     loginUser,
     logoutUser

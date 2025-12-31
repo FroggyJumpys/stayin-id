@@ -17,7 +17,7 @@ export default function Stat({ stats = [] }) {
                         )}
 
                         {item.title && (
-                            <div className="stat-title">{item.title}</div>
+                            <div className="stat-title font-bold text-xl">{item.title}</div>
                         )}
                         {item.value && (
                             <div className={`stat-value ${item.valueTint || ''}`}>{item.value}</div>

@@ -1,5 +1,10 @@
 import jwt from 'jsonwebtoken';
 
+/**
+ * Middleware untuk autentikasi dan otorisasi
+ * @param {string|string[]} requiredRole - Role yang diizinkan (string atau array)
+ * @returns {Function} Express middleware
+ */
 export default function authorize(requiredRole) {
     return (req, res, next) => {
         try {
@@ -18,9 +23,13 @@ export default function authorize(requiredRole) {
             }
 
             const payload = jwt.verify(token, secret, { algorithms: ['HS256'] });
-            // Optional role check
-            if (requiredRole && payload.role !== requiredRole) {
-                return res.status(403).json({ message: 'Forbidden: insufficient permission' });
+            
+            // Optional role check - support array atau string
+            if (requiredRole) {
+                const allowedRoles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
+                if (!allowedRoles.includes(payload.role)) {
+                    return res.status(403).json({ message: 'Forbidden: insufficient permission' });
+                }
             }
 
             req.user = payload;

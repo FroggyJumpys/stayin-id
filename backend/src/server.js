@@ -9,6 +9,10 @@ import cookieParser from 'cookie-parser'
 import userAPI from './router/users.js';
 import roomAPI from './router/rooms.js';
 import serviceAPI from './router/services.js';
+import reviewAPI from './router/reviews.js';
+import bookingAPI from './router/bookings.js';
+import paymentAPI from './router/payment.js';
+import orderAPI from './router/orders.js';
 
 const app = express();
 
@@ -17,7 +21,12 @@ const HOST = process.env.APP_HOST;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors({ origin: [`http://localhost:5173`], credentials: true }));
+app.use(cors({
+    origin: 'http://localhost:5173',
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+}));
 app.use(helmet());
 app.use(morgan('dev'));
 app.use(cookieParser());
@@ -25,6 +34,10 @@ app.use(cookieParser());
 app.use('/api/users', userAPI);
 app.use('/api/rooms', roomAPI);
 app.use('/api/services', serviceAPI);
+app.use('/api/reviews', reviewAPI);
+app.use('/api/bookings', bookingAPI);
+app.use('/api/payments', paymentAPI);
+app.use('/api/orders', orderAPI);
 
 app.get('/', (req, res) => {
     return res.json({ message: 'Server is up and running!' });

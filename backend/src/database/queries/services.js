@@ -31,8 +31,7 @@ const getService = async (req, res) => {
         const data = await pool.query('SELECT * FROM services ORDER BY id ASC');
         return res.json(data.rows);
     } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Kesalahan server internal.' });
+        return res.status(500).json({ message: 'Kesalahan server internal.', err: error });
     };
 };
 
@@ -81,8 +80,7 @@ const createService = async (req, res) => {
         return res.status(201).json({ message: `Layanan dengan nama ${name} berhasil dibuat.`, data: data.rows[0] });
     } catch (error) {
         await pool.query('ROLLBACK'); // Error => rollback
-        console.error(error);
-        return res.status(500).json({ message: 'Kesalahan server internal.' });
+        return res.status(500).json({ message: 'Kesalahan server internal.', err: error });
     }
 };
 
@@ -131,8 +129,7 @@ const updateService = async (req, res) => {
         res.status(200).json({ message: `Layanan dengan id ${parsedId} berhasil diperbarui.`, data: data.rows[0] });
     } catch (error) {
         await pool.query('ROLLBACK');
-        console.error(error);
-        return res.status(500).json({ message: 'Kesalahan server internal.' });
+        return res.status(500).json({ message: 'Kesalahan server internal.', err: error });
     }
 };
 
@@ -173,8 +170,7 @@ const deleteService = async (req, res) => {
         res.status(200).json({ message: `Layanan dengan id ${parsedId} berhasil dihapus.` });
     } catch (error) {
         await pool.query('ROLLBACK');
-        console.error(error);
-        return res.status(500).json({ message: 'Kesalahan server internal.' });
+        return res.status(500).json({ message: 'Kesalahan server internal.', err: error });
     }
 }
 

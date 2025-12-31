@@ -28,8 +28,7 @@ const getRoom = async (req, res) => {
         const data = await pool.query('SELECT * FROM rooms ORDER BY room_number ASC');
         return res.json(data.rows);
     } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Kesalahan server internal.' });
+        return res.status(500).json({ message: 'Kesalahan server internal.', err: error });
     };
 };
 
@@ -73,8 +72,7 @@ const createRoom = async (req, res) => {
         res.status(201).json({ message: `Kamar dengan nomor ${room_number} berhasil dibuat.`, data: data.rows[0] });
     } catch (error) {
         await pool.query('ROLLBACK'); // Error => rollback
-        console.error(error);
-        return res.status(500).json({ message: 'Kesalahan server internal.' });
+        return res.status(500).json({ message: 'Kesalahan server internal.', err: error });
     }
 };
 
@@ -123,8 +121,7 @@ const updateRoom = async (req, res) => {
         return res.status(200).json({ message: `Kamar dengan nomor ${target_room} berhasil diperbarui.`, data: data.rows[0] });
     } catch (error) {
         await pool.query('ROLLBACK');
-        console.error(error);
-        return res.status(500).json({ message: 'Kesalahan server internal.' });
+        return res.status(500).json({ message: 'Kesalahan server internal.', err: error });
     };
 };
 
@@ -157,8 +154,7 @@ const deleteRoom = async (req, res) => {
         res.status(200).json({ message: `Kamar dengan nomor ${room_number} berhasil dihapus.` });
     } catch (error) {
         await pool.query('ROLLBACK');
-        console.error(error);
-        return res.status(500).json({ message: 'Kesalahan server internal.' });
+        return res.status(500).json({ message: 'Kesalahan server internal.', err: error });
     }
 };
 

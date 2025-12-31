@@ -1,10 +1,14 @@
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import Navbar from "../../../components/Navbar";
+import Footer from "../../../components/Footer";
 import { useGSAP } from "@gsap/react";
-import SlideRight from "../utils/animation/SlideRight";
-import SlideLeft from "../utils/animation/SlideLeft";
+import SlideRight from "../../../utils/animation/SlideRight";
+import SlideLeft from "../../../utils/animation/SlideLeft";
+import ServiceBuyModel from "../components/ServiceBuyModel";
 
 export default function Service() {
+    const openModal = () => {
+        document.getElementById('service_buy_modal').showModal();
+    };
 
     useGSAP(() => {
         SlideRight('#go-right-card', { duration: 1.5, delay: 0.10, xFrom: -200, start: 'top 60%'  });
@@ -30,7 +34,12 @@ export default function Service() {
                                 <h2 className="card-title font-bold">Room Service</h2>
                                 <p className="text-base">Rasakan kenyamanan tanpa batas! Nikmati hidangan favorit Anda langsung di kamar dengan layanan Room Service kami yang siap 24 jam.</p>
                                 <div className="card-actions justify-end">
-                                <button className="btn btn-primary">Pesan</button>
+                                <button 
+                                    className="btn btn-primary"
+                                    onClick={() => openModal()}
+                                >
+                                    Pesan
+                                </button>
                                 </div>
                             </div>
                         </div>
@@ -42,7 +51,12 @@ export default function Service() {
                                 <h2 className="card-title font-bold">Sarapan Gratis</h2>
                                 <p className="text-base">Mulai pagi Anda dengan senyum! Sarapan gratis dengan pilihan menu lezat dan bergizi menanti setiap tamu.</p>
                                 <div className="card-actions justify-end">
-                                <button className="btn btn-primary">Pesan</button>
+                                <button 
+                                    className="btn btn-primary"
+                                    onClick={() => openModal()}
+                                >
+                                    Pesan
+                                </button>
                                 </div>
                             </div>
                             <figure className="w-1/2 h-64">
@@ -66,7 +80,12 @@ export default function Service() {
                                 <h2 className="card-title font-bold">Gym</h2>
                                 <p className="text-base">Jaga tubuh tetap bugar selama perjalanan! Fasilitas gym modern kami siap mendukung rutinitas olahraga Anda.</p>
                                 <div className="card-actions justify-end">
-                                <button className="btn btn-primary">Pesan</button>
+                                <button 
+                                    className="btn btn-primary"
+                                    onClick={() => openModal()}
+                                >
+                                    Pesan
+                                </button>
                                 </div>
                             </div>
                         </div>
@@ -78,7 +97,12 @@ export default function Service() {
                                 <h2 className="card-title font-bold">Spa</h2>
                                 <p className="text-base">Relaksasi sempurna menanti Anda. Manjakan diri dengan layanan spa eksklusif yang menenangkan pikiran dan tubuh.</p>
                                 <div className="card-actions justify-end">
-                                <button className="btn btn-primary">Pesan</button>
+                                <button 
+                                    className="btn btn-primary"
+                                    onClick={() => openModal()}
+                                >
+                                    Pesan
+                                </button>
                                 </div>
                             </div>
                             <figure className="w-1/2 h-64">
@@ -90,6 +114,11 @@ export default function Service() {
                         </div>
                     </div>
                 </section>
+
+                {/* Service Buy Modal */}
+                <ServiceBuyModel 
+                    id="service_buy_modal" 
+                />
 
                 <Footer />
             </div>

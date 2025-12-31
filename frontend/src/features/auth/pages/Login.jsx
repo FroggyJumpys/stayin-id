@@ -1,51 +1,73 @@
-import Footer from "../components/Footer"
-;
-import { Link } from "react-router-dom";
-import { useForm } from 'react-hook-form';
+import Footer from "../../../components/Footer";
+import Alert from '../../../components/Alert';
 
-export default function Register() {
+import { useState } from 'react';
+import { Link, useNavigate } from "react-router-dom";
+import { useForm } from 'react-hook-form';
+import api from '../../../utils/api';
+
+export default function Login() {
+    const [alert, setAlert] = useState({
+        message: '',
+        status: 0
+    });
     const {
         register,
         handleSubmit,
     } = useForm();
+    const navigate = useNavigate();
 
-    const onSubmit = (data) => console.log(data);
-    
+    const onSubmit = async (data) => {
+        try {
+            const res = await api.post('/api/users/auth/login', data);
+
+            if (res.status === 200) {
+                setAlert({ message: res.data.message, status: 200 });
+                
+                // Fetch user data untuk get role
+                try {
+                    const userRes = await api.get('/api/users/auth/me');
+                    
+                    const userRole = userRes.data?.role;
+                    
+                    // Redirect berdasarkan role
+                    setTimeout(() => {
+                        if (userRole === 'admin') {
+                            navigate('/admin', { replace: true });
+                        } else if (userRole === 'user') {
+                            navigate('/user', { replace: true });
+                        } else {
+                            navigate('/', { replace: true });
+                        }
+                    }, 2000);
+                } catch {
+                    // Fallback ke home jika gagal fetch user
+                    setTimeout(() => {
+                        navigate('/', { replace: true });
+                    }, 2000);
+                }
+                return;
+            }
+            setAlert({ message: res.data.message, status: res.status });
+            setTimeout(() => {
+                setAlert({ message: '', status: 0 });
+            }, 2000);
+        } catch (error) {
+            setAlert({ message: 'Error dalam login', status: 500 });
+            return error;
+        }
+    };
     return (
         <>
+            {alert ? Alert(alert.message, alert.status) : setAlert({ message: '', status: 0 })}
             <div className="bg-base-200 min-h-screen flex flex-col">
                 <div className="flex-1 flex items-center justify-center min-h-screen">
                     <div className="card card-border bg-base-100 w-96 shadow-lg">
                         <div className="card-body">
-                            <h2 className="card-title text-2xl">Register</h2>
+                            <h2 className="card-title text-2xl">Login</h2>
                             <div className="divider"></div>
                             <form onSubmit={handleSubmit(onSubmit)}>
                                 <div className="flex flex-col gap-6">
-                                    <div>
-                                        <label className="label">
-                                            <span className="label-text font-semibold">Username</span>
-                                        </label>
-                                        <label className="input validator join-item">
-                                        <svg className="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                                            <g
-                                            strokeLinejoin="round"
-                                            strokeLinecap="round"
-                                            strokeWidth="2.5"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            >
-                                            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
-                                            <circle cx="12" cy="7" r="4"></circle>
-                                            </g>
-                                        </svg>
-                                        <input 
-                                            type="text" 
-                                            name="username" 
-                                            {...register('username')}
-                                            placeholder="johndoe" 
-                                            required />
-                                        </label>
-                                    </div>
                                     <div>
                                         <label className="label">
                                             <span className="label-text font-semibold">Email</span>
@@ -108,10 +130,10 @@ export default function Register() {
                                     </div>
                                 </div>
                                 <div className="mt-1">
-                                    <span className="text-gray-500">Sudah memiliki akun? <Link to="/login" className="text-base-content underline hover:text-base-200">Login</Link></span>
+                                    <span className="text-gray-500">Belum memiliki akun? <Link to="/register" className="text-base-content underline hover:text-base-200">Register</Link></span>
                                 </div>
                                 <div className="card-actions justify-end mt-10">
-                                    <button type="submit" className="btn btn-primary">Register</button>
+                                    <button type="submit" className="btn btn-primary">Login</button>
                                 </div>
                             </form>
                         </div>
